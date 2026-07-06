@@ -22,7 +22,11 @@ export default async function FinancialReportPrintPage() {
 
   const tableRows = allPOs?.map(po => {
     const value = po.po_items.reduce((sum: number, item: any) => sum + Number(item.total_amount), 0);
-    const vendorName = Array.isArray(po.vendors) ? po.vendors[0]?.company_name : po.vendors?.company_name;
+    
+    // 🚨 ADDED: Type cast to 'any' to bypass strict relational inference
+    const vendorData: any = po.vendors;
+    const vendorName = Array.isArray(vendorData) ? vendorData[0]?.company_name : vendorData?.company_name;
+    
     const isReconciled = po.status === 'reconciled';
     
     if (isReconciled) totalReconciled += value;
