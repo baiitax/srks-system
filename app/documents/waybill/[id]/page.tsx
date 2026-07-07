@@ -12,32 +12,36 @@ export default async function GeneratedWaybillPage({ params }: { params: Promise
     .select(`
       po_number,
       created_at,
-      customers (company_name, delivery_address_default, contact_phone),
-      vendors (company_name, contact_phone),
-      po_items (products (name, sku, uom), quantity)
+      customers (company_name, delivery_address_default),
+      vendors (company_name),
+      po_items (
+        quantity,
+        products (name, sku, uom)
+      )
     `)
     .eq("id", poId)
     .single();
 
   if (!po) return <div className="p-10 text-red-600 font-bold">Waybill data unavailable.</div>;
 
-  const vendorName = Array.isArray(po.vendors) ? po.vendors[0]?.company_name : po.vendors?.company_name;
-  const customerName = Array.isArray(po.customers) ? po.customers[0]?.company_name : po.customers?.company_name;
-  const destination = Array.isArray(po.customers) ? po.customers[0]?.delivery_address_default : po.customers?.delivery_address_default;
+  // 🚨 FIXED: Type cast to 'any' to bypass strict Next.js Turbopack relational inference
+  const vendorData: any = po.vendors;
+  const customerData: any = po.customers;
+
+  const vendorName = Array.isArray(vendorData) ? vendorData[0]?.company_name : vendorData?.company_name;
+  const customerName = Array.isArray(customerData) ? customerData[0]?.company_name : customerData?.company_name;
+  const destination = Array.isArray(customerData) ? customerData[0]?.delivery_address_default : customerData?.delivery_address_default;
 
   return (
     <div className="min-h-screen bg-slate-200 print:bg-white p-4 md:p-8 font-sans text-slate-900">
       
       {/* ── NON-PRINTABLE UI CONTROLS ── */}
       <div className="max-w-4xl mx-auto mb-6 flex justify-between items-center print:hidden">
-        <Link href={`/agent/upload/${poId}`} className="text-sm font-bold text-slate-500 hover:text-slate-800">
+        <Link href={`/agent/upload/${poId}`} className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors">
           &larr; Back to Mission
         </Link>
-        <button 
-          className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-2.5 rounded-md font-bold shadow-sm"
-        >
+        <button className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-2.5 rounded-md font-bold shadow-sm transition-colors">
           <Printer className="w-4 h-4" /> Save / Print PDF
-          {/* Note: In a client component wrapper, this button would call window.print() */}
         </button>
       </div>
 
@@ -51,13 +55,15 @@ export default async function GeneratedWaybillPage({ params }: { params: Promise
               <div className="w-8 h-8 bg-slate-900 flex items-center justify-center rounded-sm">
                 <ShieldCheck className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-2xl font-black tracking-tighter">SRKS LOGISTICS</h1>
+              <h1 className="text-2xl font-black tracking-tighter text-slate-900">SRKS LOGISTICS</h1>
             </div>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Official Outbound Waybill</p>
           </div>
           <div className="text-right flex flex-col items-end">
             <QrCode className="w-16 h-16 text-slate-900 mb-2" />
-            <p className="text-[10px] font-mono text-slate-500">AUTH-{poId.split('-')[0]}</p>
+            <p className="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-wider">
+              AUTH-{poId.split('-')[0]}
+            </p>
           </div>
         </div>
 
@@ -65,23 +71,23 @@ export default async function GeneratedWaybillPage({ params }: { params: Promise
         <div className="grid grid-cols-2 gap-8 mb-8">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">System Reference</p>
-            <p className="text-xl font-black font-mono">{po.po_number}</p>
+            <p className="text-xl font-black font-mono text-slate-900">{po.po_number}</p>
             <p className="text-xs font-medium text-slate-600 mt-1">
-              Date: {new Date().toLocaleDateString('en-GB')}
+              Issue Date: {new Date(po.created_at || new Date()).toLocaleDateString('en-GB')}
             </p>
           </div>
         </div>
 
         {/* Routing Box */}
-        <div className="grid grid-cols-2 gap-8 mb-10 border border-slate-200 rounded-md p-6">
+        <div className="grid grid-cols-2 gap-8 mb-10 border border-slate-200 rounded-md p-6 bg-slate-50/50">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Pickup Location (Vendor)</p>
-            <p className="text-sm font-bold text-slate-900">{vendorName}</p>
+            <p className="text-sm font-bold text-slate-900">{vendorName || "Unassigned Vendor"}</p>
           </div>
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Delivery Destination (Client)</p>
-            <p className="text-sm font-bold text-slate-900">{customerName}</p>
-            <p className="text-xs text-slate-600 mt-1">{destination}</p>
+            <p className="text-sm font-bold text-slate-900">{customerName || "Unassigned Client"}</p>
+            <p className="text-xs text-slate-600 mt-1 max-w-xs leading-relaxed">{destination || "No address provided."}</p>
           </div>
         </div>
 
@@ -91,18 +97,18 @@ export default async function GeneratedWaybillPage({ params }: { params: Promise
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b-2 border-slate-800 text-left">
-                <th className="py-2 font-bold uppercase tracking-wider text-xs">SKU</th>
-                <th className="py-2 font-bold uppercase tracking-wider text-xs">Description</th>
-                <th className="py-2 text-right font-bold uppercase tracking-wider text-xs">Volume / Qty</th>
+                <th className="py-3 font-bold uppercase tracking-wider text-[10px] text-slate-700">SKU</th>
+                <th className="py-3 font-bold uppercase tracking-wider text-[10px] text-slate-700">Description</th>
+                <th className="py-3 text-right font-bold uppercase tracking-wider text-[10px] text-slate-700">Volume / Qty</th>
               </tr>
             </thead>
             <tbody>
               {po.po_items?.map((item: any, idx: number) => (
                 <tr key={idx} className="border-b border-slate-200">
-                  <td className="py-3 font-mono text-xs">{item.products?.sku}</td>
-                  <td className="py-3 font-medium">{item.products?.name}</td>
-                  <td className="py-3 text-right font-bold text-base">
-                    {item.quantity} <span className="text-xs font-normal text-slate-500">{item.products?.uom.replace('_', ' ').toUpperCase()}</span>
+                  <td className="py-4 font-mono text-xs text-slate-600 font-medium">{item.products?.sku}</td>
+                  <td className="py-4 font-bold text-slate-900">{item.products?.name}</td>
+                  <td className="py-4 text-right font-bold text-base text-slate-900">
+                    {item.quantity} <span className="text-[10px] font-bold text-slate-500 uppercase ml-1">{item.products?.uom.replace('_', ' ')}</span>
                   </td>
                 </tr>
               ))}
