@@ -80,42 +80,6 @@
 }
 
 
-/* ── 6. ENTERPRISE PRELOADER ANIMATIONS ── */
-@keyframes boot-fade-out {
-  0% { opacity: 1; transform: scale(1); visibility: visible; }
-  90% { opacity: 0; transform: scale(1.02); visibility: visible; }
-  100% { opacity: 0; transform: scale(1.02); visibility: hidden; z-index: -1; }
-}
-
-@keyframes progress-fill-swift {
-  0% { width: 0%; opacity: 0; }
-  10% { opacity: 1; }
-  50% { width: 60%; }
-  100% { width: 100%; opacity: 1; }
-}
-
-@keyframes text-focus-in {
-  0% { filter: blur(8px); opacity: 0; letter-spacing: 0.25em; }
-  100% { filter: blur(0px); opacity: 1; letter-spacing: 0.15em; }
-}
-
-@keyframes pulse-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.animate-boot-sequence {
-  animation: boot-fade-out 0.6s cubic-bezier(0.16, 1, 0.3, 1) 2s forwards;
-}
-
-.animate-progress-swift {
-  animation: progress-fill-swift 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.2s forwards;
-}
-
-.animate-text-focus {
-  animation: text-focus-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
-}
-
 /* ── 5. PHYSICAL PRINT OPTIMIZATIONS ── */
 @media print {
   html, body {
@@ -134,4 +98,42 @@
   .print\:hidden {
     display: none !important;
   }
+}
+
+/* ── 6. ENTERPRISE PRELOADER ANIMATIONS (LIGHT THEME) ── */
+@keyframes boot-fade-light {
+  0% { opacity: 1; visibility: visible; }
+  85% { opacity: 1; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; z-index: -1; }
+}
+
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulse-glow-light {
+  0%, 100% { transform: scale(1); opacity: 0.15; }
+  50% { transform: scale(1.25); opacity: 0.05; }
+}
+
+@keyframes text-reveal {
+  0% { opacity: 0; transform: translateY(4px); filter: blur(4px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0px); }
+}
+
+.animate-boot-light {
+  animation: boot-fade-light 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-float {
+  animation: float-gentle 3s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: pulse-glow-light 2s ease-in-out infinite;
+}
+
+.animate-reveal {
+  animation: text-reveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
 }

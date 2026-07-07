@@ -1,20 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 
 export default function EnterprisePreloader() {
   const [isMounted, setIsMounted] = useState(false);
 
-  // Ensure this only runs on the client to prevent hydration mismatch
   useEffect(() => {
     setIsMounted(true);
     
-    // Safety fallback: Force remove the preloader from the DOM after 3 seconds
-    // to ensure users are never trapped if an animation hangs.
+    // Safety fallback: Unmounts loader safely after 2.5 seconds
     const timer = setTimeout(() => {
       const loader = document.getElementById("enterprise-preloader");
       if (loader) loader.style.display = "none";
-    }, 3000);
+    }, 2500);
 
     return () => clearTimeout(timer);
   }, []);
@@ -24,41 +23,37 @@ export default function EnterprisePreloader() {
   return (
     <div 
       id="enterprise-preloader"
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#0f172a] animate-boot-sequence pointer-events-none"
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-50/95 backdrop-blur-md animate-boot-light pointer-events-none"
     >
       <div className="flex flex-col items-center sm:w-full sm:max-w-[320px] px-6">
         
-        {/* Logo Mark */}
-        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-[0_0_40px_rgba(255,255,255,0.1)] mb-6 opacity-0 animate-[fade-in_0.4s_ease-out_forwards]">
-          <span className="text-xl font-black text-[#0f172a] tracking-tighter">
-            P
-          </span>
+        {/* Graphical Floating Brand Mark */}
+        <div className="relative flex items-center justify-center mb-8">
+          {/* Ambient Glow */}
+          <div className="absolute inset-0 bg-slate-900 rounded-2xl animate-glow blur-md" />
+          
+          {/* Core Identity Box */}
+          <div className="relative w-16 h-16 bg-slate-950 rounded-2xl flex items-center justify-center shadow-xl animate-float border border-slate-800">
+            <span className="text-3xl font-black text-white tracking-tighter">
+              P
+            </span>
+          </div>
         </div>
 
         {/* Brand Typography */}
-        <div className="text-center mb-10">
-          <h1 className="text-white text-sm font-bold uppercase text-transparent animate-text-focus opacity-0">
-            Pluck Global
+        <div className="text-center mb-6 opacity-0 animate-reveal">
+          <h1 className="text-slate-900 text-lg font-bold tracking-tight">
+            Pluck Global Supply
           </h1>
-          <p className="text-[#64748b] text-[10px] font-mono mt-2 uppercase tracking-widest opacity-0 animate-[fade-in_0.6s_ease-out_0.6s_forwards]">
-            Initializing Secure Node...
+          <p className="text-slate-500 text-[11px] font-semibold uppercase tracking-widest mt-1">
+            System Initialization
           </p>
         </div>
 
-        {/* ── High-Tech Progress Track ── */}
-        <div className="w-full relative h-[2px] bg-[#1e293b] rounded-full overflow-hidden opacity-0 animate-[fade-in_0.4s_ease-out_0.2s_forwards]">
-          {/* Primary Swift Fill */}
-          <div className="absolute top-0 left-0 h-full bg-white animate-progress-swift w-0 rounded-full" />
-          
-          {/* Superimposed Shimmer Effect */}
-          <div 
-            className="absolute top-0 left-0 h-full w-full opacity-50"
-            style={{
-              backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.8) 50%, transparent 100%)',
-              backgroundSize: '200% 100%',
-              animation: 'pulse-shimmer 1.5s infinite linear'
-            }}
-          />
+        {/* Sleek Graphical Spinner */}
+        <div className="flex items-center gap-2 text-slate-400 opacity-0 animate-reveal" style={{ animationDelay: '0.4s' }}>
+          <Loader2 className="w-4 h-4 animate-spin text-slate-900" />
+          <span className="text-[10px] font-mono font-medium uppercase tracking-wider">Syncing node...</span>
         </div>
 
       </div>

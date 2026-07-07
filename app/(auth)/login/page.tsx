@@ -17,11 +17,21 @@ function LoginEngine() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Intercept Middleware URL Errors on load
+  // ── SPEED OPTIMIZATION: PREFETCH TARGET ROUTES ──
+  // This forces Next.js to download the dashboards in the background
+  // completely eliminating the "hanging" delay upon submission.
+  useEffect(() => {
+    router.prefetch("/admin");
+    router.prefetch("/agent");
+    router.prefetch("/admin/po");
+  }, [router]);
+
   useEffect(() => {
     const errorType = searchParams.get("error");
     if (errorType === "profile_not_found") {
       setErrorMessage("Identity profile missing from ledger. Contact a system administrator to provision your access clearance.");
+    } else if (errorType === "session_expired") {
+      setErrorMessage("Secure session expired. Please re-authenticate your node.");
     }
   }, [searchParams]);
 
@@ -36,13 +46,12 @@ function LoginEngine() {
       setErrorMessage(result.error || "Access denied. Verification routine failed.");
       setIsLoading(false);
     } else {
-      // STRICT ENTERPRISE ROUTING
+      // The push will now be instant due to background prefetching
       if (result.role === "admin") {
-        router.push("/admin"); // Admins go to the Executive Dashboard
+        router.push("/admin");
       } else if (result.role === "agent") {
-        router.push("/agent"); // Agents go to the dedicated Field Portal
+        router.push("/agent"); 
       } else {
-        // Fallback for unknown roles to prevent unauthorized access
         setErrorMessage("Clearance role undefined. Contact IT.");
         setIsLoading(false);
       }
@@ -131,7 +140,7 @@ function LoginEngine() {
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                   <span>Verifying Identity...</span>
                 </>
               ) : (
@@ -180,7 +189,6 @@ export default function EnterpriseLoginPage() {
            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20zM0 20h20v20H0V20z' fill='%23000000' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E")` }}>
       </div>
       
-      {/* Required Next.js Suspense boundary for URL Param reading */}
       <Suspense fallback={<div className="flex justify-center items-center h-full"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>}>
         <LoginEngine />
       </Suspense>
