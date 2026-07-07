@@ -5,12 +5,18 @@ import {
   Menu, 
   X, 
   LayoutDashboard, 
-  FileText, 
-  TrendingUp, 
-  ShieldCheck, 
-  LogOut,
-  ChevronRight,
+  BarChart3,
+  BookOpen,
+  Scale,
+  FileWarning,
+  FileSignature,
+  Package,
+  Users,
   Building2,
+  Warehouse,
+  ScrollText,
+  KeyRound,
+  LogOut,
   SlidersHorizontal,
   User
 } from "lucide-react";
@@ -21,43 +27,53 @@ export default function EnhancedAdminLayout({ children }: { children: React.Reac
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
 
-  // Categorized Navigation Mapping
-  const navigationGroups = [
+  // Master Enterprise Navigation Architecture
+  const NAV_GROUPS = [
     {
-      title: "Core Operations",
-      routes: [
-        { name: "Overview", href: "/admin", icon: LayoutDashboard, shortcut: "⌥1" },
-        { name: "Purchase Orders", href: "/admin/po", icon: FileText, shortcut: "⌥2" },
-      ]
+      heading: "Analytics & Finance",
+      items: [
+        { href: "/admin",               label: "Executive Dashboard",   icon: LayoutDashboard, shortcut: "⌥1" },
+        { href: "/admin/reports",       label: "Enterprise Reporting",  icon: BarChart3,       shortcut: "⌥2" },
+        { href: "/admin/ledgers",       label: "Financial Ledgers",     icon: BookOpen,        shortcut: "⌥3" },
+        { href: "/admin/match-station", label: "Finance Match Station", icon: Scale,           shortcut: "⌥4" },
+        { href: "/admin/variances",     label: "Variance Resolution",   icon: FileWarning,     shortcut: "⌥5" },
+      ],
     },
     {
-      title: "Intelligence & Ledger",
-      routes: [
-        { name: "Financial Report", href: "/admin/reports/financial", icon: TrendingUp, shortcut: "⌥3" },
-      ]
+      heading: "Operations",
+      items: [
+        { href: "/admin/po",        label: "PO Factory",       icon: FileSignature, shortcut: "⌥6" },
+        { href: "/admin/products",  label: "Product Vault",    icon: Package,       shortcut: "⌥7" },
+        { href: "/admin/vendors",   label: "Vendor Directory", icon: Users,         shortcut: "⌥8" },
+        { href: "/admin/customers", label: "Client Directory", icon: Building2,     shortcut: "⌥9" },
+        { href: "/admin/inventory", label: "Warehouse Stock",  icon: Warehouse,     shortcut: "⇧I" },
+      ],
     },
     {
-      title: "System Parameters",
-      routes: [
-        { name: "Access Control (IAM)", href: "/admin/access-control", icon: ShieldCheck, shortcut: "⌥4" },
-      ]
-    }
+      heading: "Governance",
+      items: [
+        { href: "/admin/audit",  label: "System Audit Log", icon: ScrollText, shortcut: "⇧A" },
+        { href: "/admin/access", label: "Access Control",   icon: KeyRound,   shortcut: "⇧K" },
+      ],
+    },
   ];
 
   const NavigationMenu = ({ closeMobile }: { closeMobile?: () => void }) => (
     <div className="space-y-6">
-      {navigationGroups.map((group, gIdx) => (
+      {NAV_GROUPS.map((group, gIdx) => (
         <div key={gIdx} className="space-y-1.5">
           <h3 className="px-3 text-[10px] font-bold tracking-wider uppercase text-slate-400">
-            {group.title}
+            {group.heading}
           </h3>
           <nav className="space-y-0.5">
-            {group.routes.map((route) => {
-              const isActive = pathname === route.href;
+            {group.items.map((item) => {
+              // Exact match for the dashboard root, prefix match for sub-routes
+              const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(`${item.href}/`));
+              
               return (
                 <Link
-                  key={route.href}
-                  href={route.href}
+                  key={item.href}
+                  href={item.href}
                   onClick={() => closeMobile?.()}
                   className={`flex items-center justify-between px-3 py-2 border rounded-md text-xs font-semibold transition-all group ${
                     isActive 
@@ -66,8 +82,8 @@ export default function EnhancedAdminLayout({ children }: { children: React.Reac
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <route.icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-950'}`} />
-                    <span>{route.name}</span>
+                    <item.icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-950'}`} />
+                    <span>{item.label}</span>
                   </div>
                   
                   {/* Subtle Action/Shortcut Indicator */}
@@ -75,7 +91,7 @@ export default function EnhancedAdminLayout({ children }: { children: React.Reac
                     <div className="w-1 h-1 bg-white rounded-full" />
                   ) : (
                     <span className="text-[9px] font-mono font-medium text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hidden lg:inline">
-                      {route.shortcut}
+                      {item.shortcut}
                     </span>
                   )}
                 </Link>
@@ -114,7 +130,7 @@ export default function EnhancedAdminLayout({ children }: { children: React.Reac
           onClick={() => setIsMobileOpen(false)}
         >
           <div 
-            className="fixed inset-y-0 left-0 w-68 bg-white p-6 flex flex-col justify-between shadow-2xl"
+            className="fixed inset-y-0 left-0 w-[280px] bg-white p-6 flex flex-col justify-between shadow-2xl h-full overflow-y-auto hide-scrollbar"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-8">
@@ -128,7 +144,7 @@ export default function EnhancedAdminLayout({ children }: { children: React.Reac
             </div>
 
             {/* Mobile Footer Identity */}
-            <div className="border-t border-slate-100 pt-4 flex items-center justify-between">
+            <div className="border-t border-slate-100 pt-4 mt-8 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-600"><User className="w-4 h-4" /></div>
                 <div>
@@ -143,7 +159,7 @@ export default function EnhancedAdminLayout({ children }: { children: React.Reac
       )}
 
       {/* ── DESKTOP PERSISTENT CORE SIDEBAR ── */}
-      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200/60 p-5 flex-col justify-between z-30 select-none">
+      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200/60 p-5 flex-col justify-between z-30 select-none overflow-y-auto hide-scrollbar">
         <div className="space-y-8">
           
           {/* Section 1: Institutional Workspace Selector */}
@@ -165,7 +181,7 @@ export default function EnhancedAdminLayout({ children }: { children: React.Reac
         </div>
 
         {/* Section 3: Professional Identity Profile Card */}
-        <div className="border-t border-slate-100 pt-4 flex items-center justify-between gap-2">
+        <div className="border-t border-slate-100 pt-4 mt-8 flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-full bg-slate-950 font-black text-[11px] text-white flex items-center justify-center shrink-0 shadow-xs">
               FE
@@ -185,8 +201,8 @@ export default function EnhancedAdminLayout({ children }: { children: React.Reac
       </aside>
 
       {/* ── WORKING VIEWPORT PLATFORM ── */}
-      <div className="md:pl-64 pt-14 md:pt-0">
-        <main className="p-4 sm:p-6 lg:p-10">
+      <div className="md:pl-64 pt-14 md:pt-0 flex flex-col min-h-screen">
+        <main className="flex-1 p-4 sm:p-6 lg:p-10">
           {children}
         </main>
       </div>
