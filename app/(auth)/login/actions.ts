@@ -1,30 +1,41 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { logSystemEvent } from "@/lib/audit-logger";
 
-/**
- * Enterprise Authentication Server Action
- * Validates credentials and returns systemic routing parameters
- */
-export async function loginUserAction(formData: any) {
-  const { email, password } = formData;
+interface LoginCredentials {
+  email?: string;
+  password?: string;
+}
 
-  // 1. Edge Ingress Validation
+export async function loginUserAction(credentials: LoginCredentials) {
+  const { email, password } = credentials;
+
   if (!email || !password) {
     return { success: false, error: "Authentication inputs cannot be left blank." };
   }
 
+  const sanitizedEmail = email.trim().toLowerCase();
+
   try {
     const supabase = await createClient();
 
-    // 2. Authenticate Core Session via Supabase Auth Engine
+    // Authenticate Core Session
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
+      email: sanitizedEmail,
       password,
     });
 
+    // ── AUDIT INJECTION: FAILED LOGIN ──
     if (authError) {
-      return { success: false, error: authError.message };
+      await logSystemEvent({
+        actionType: "AUTH_LOGIN_FAILED",
+        changeManifest: { 
+          attempted_email: sanitizedEmail, 
+          reason: "invalid_credentials" 
+        }
+      });
+      return { success: false, error: "Invalid corporate credentials provided." };
     }
 
     const userId = authData?.user?.id;
@@ -32,24 +43,47 @@ export async function loginUserAction(formData: any) {
       return { success: false, error: "Systemic authentication identity token generation failed." };
     }
 
-    // 3. Resolve Custom Clearance Role for Dynamic Inbound Routing
+    // Strict RBAC Clearance Validation
     const { data: profile, error: profileError } = await supabase
       .from("users_profiles")
       .select("role")
       .eq("id", userId)
       .single();
 
+    // ── AUDIT INJECTION: ORPHANED ACCOUNT REJECTION ──
     if (profileError || !profile) {
-      // If the profile entry is missing, default to agent clearance path for system safety
-      return { success: true, role: "agent" };
+      await supabase.auth.signOut(); 
+      await logSystemEvent({
+        actionType: "AUTH_LOGIN_FAILED",
+        userId: userId,
+        changeManifest: { 
+          attempted_email: sanitizedEmail, 
+          reason: "missing_rbac_profile_ledger" 
+        }
+      });
+      return { 
+        success: false, 
+        error: "Identity profile missing from ledger. Contact IT administration to provision your clearance." 
+      };
     }
 
+    // ── AUDIT INJECTION: SUCCESSFUL LOGIN ──
+    await logSystemEvent({
+      actionType: "AUTH_LOGIN_SUCCESS",
+      userId: userId,
+      changeManifest: { 
+        email: sanitizedEmail, 
+        role_assigned: profile.role 
+      }
+    });
+
+    // Successful Execution
     return { success: true, role: profile.role };
 
   } catch (err: any) {
     return { 
       success: false, 
-      error: err?.message || "An unhandled transport layer exception occurred." 
+      error: "A secure transport exception occurred. Please check network connectivity and try again." 
     };
   }
 }
