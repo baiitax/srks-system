@@ -79,6 +79,43 @@
   }
 }
 
+
+/* ── 6. ENTERPRISE PRELOADER ANIMATIONS ── */
+@keyframes boot-fade-out {
+  0% { opacity: 1; transform: scale(1); visibility: visible; }
+  90% { opacity: 0; transform: scale(1.02); visibility: visible; }
+  100% { opacity: 0; transform: scale(1.02); visibility: hidden; z-index: -1; }
+}
+
+@keyframes progress-fill-swift {
+  0% { width: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  50% { width: 60%; }
+  100% { width: 100%; opacity: 1; }
+}
+
+@keyframes text-focus-in {
+  0% { filter: blur(8px); opacity: 0; letter-spacing: 0.25em; }
+  100% { filter: blur(0px); opacity: 1; letter-spacing: 0.15em; }
+}
+
+@keyframes pulse-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.animate-boot-sequence {
+  animation: boot-fade-out 0.6s cubic-bezier(0.16, 1, 0.3, 1) 2s forwards;
+}
+
+.animate-progress-swift {
+  animation: progress-fill-swift 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.2s forwards;
+}
+
+.animate-text-focus {
+  animation: text-focus-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+}
+
 /* ── 5. PHYSICAL PRINT OPTIMIZATIONS ── */
 @media print {
   html, body {

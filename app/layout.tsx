@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
+import { Inter } from "next/font/google";
+import EnterprisePreloader from "@/components/EnterprisePreloader";
 
 // Configure Inter with optimal display settings for Enterprise SaaS
 const inter = Inter({ 
@@ -10,8 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Pluck Global | Enterprise Procurement",
-  description: "Secure Procurement & Supply Record-Keeping System",
+  title: "Pluck Global Supply | Secure Operations Ledger",
+  description: "Enterprise Tier-1 Logistics and Operations Management System",
 };
 
 export default function RootLayout({
@@ -20,9 +21,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} antialiased`}>
-      <body className="font-sans bg-slate-50 text-slate-900 selection:bg-emerald-500/30">
+    <html lang="en" className="antialiased">
+      <body className="min-h-screen bg-slate-50 flex flex-col selection:bg-slate-900 selection:text-white">
+        
+        {/* System Boot Splash Screen */}
+        <EnterprisePreloader />
+        
+        {/* Main Application Injector */}
         {children}
+        
       </body>
     </html>
   );

@@ -1,124 +1,86 @@
-// middleware.ts
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-function clearSupabaseAuthCookies(response: NextResponse, request: NextRequest) {
-  const allCookies = request.cookies.getAll()
-  for (const cookie of allCookies) {
-    const name = cookie.name.toLowerCase()
-    if (name.includes('sb-') || name.includes('supabase')) {
-      response.cookies.set(cookie.name, '', {
-        maxAge: 0,
-        expires: new Date(0),
-        path: '/',
-      })
-    }
-  }
-}
+// Initialize a lightweight Edge client for rapid token verification
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-function normalizeRole(value: unknown) {
-  if (typeof value !== 'string') {
-    return null
-  }
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
+  
+  // 1. Extract the current execution path
+  const path = req.nextUrl.pathname;
 
-  const normalized = value.toLowerCase()
-  return normalized === 'admin' || normalized === 'agent' || normalized === 'manager'
-    ? normalized
-    : null
-}
+  // 2. Define protected institutional boundaries
+  const isAdminRoute = path.startsWith("/admin");
+  const isAgentRoute = path.startsWith("/agent");
+  const isAuthRoute = path === "/login" || path === "/register";
 
-export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
+  // If the route doesn't require protection, let it pass instantly
+  if (!isAdminRoute && !isAgentRoute && !isAuthRoute) return res;
 
-  // 1. Initialize Supabase and refresh the auth cookie
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
+  // 3. Extract the Auth Session Token from the user's cookies
+  // (Supabase stores the session under the 'sb-[project-ref]-auth-token' convention)
+  const cookieName = Object.keys(req.cookies.getAll()).find(name => name.includes('-auth-token'));
+  const sessionCookie = cookieName ? req.cookies.get(cookieName)?.value : null;
 
-  // 2. Fetch the current authenticated user
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // 3. Define our route boundaries
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')
-  const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
-  const isAgentRoute = request.nextUrl.pathname.startsWith('/agent')
-  const hasProfileError = request.nextUrl.searchParams.get('error') === 'profile_not_found'
-
-  // 4. Block unauthenticated users from protected areas
-  if (!user && (isAdminRoute || isAgentRoute)) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+  // 4. Unauthenticated users trying to access protected portals get ejected to Login
+  if (!sessionCookie && (isAdminRoute || isAgentRoute)) {
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // 5. Enforce Role-Based Access Control (RBAC)
-  if (user) {
-    const { data: profile } = await supabase
-      .from('users_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle()
+  // 5. If a session exists, we must verify their Clearance Level (Role)
+  if (sessionCookie) {
+    try {
+      const parsedSession = JSON.parse(sessionCookie);
+      const accessToken = parsedSession[0]; // The JWT Access Token
 
-    const profileRole = normalizeRole(profile?.role)
-    const metadataRole = normalizeRole(user.user_metadata?.role) ?? normalizeRole(user.app_metadata?.role)
-    const role = metadataRole ?? profileRole
+      // Get the user's identity from the Supabase Auth engine
+      const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
 
-    if (!role || (role !== 'admin' && role !== 'agent' && role !== 'manager')) {
-      if (isAuthRoute && hasProfileError) {
-        clearSupabaseAuthCookies(supabaseResponse, request)
-        return supabaseResponse
+      if (!user || authError) throw new Error("Invalid token");
+
+      // Cross-reference the user's ID with the profile ledger to get their role
+      const { data: profile } = await supabase
+        .from("users_profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      const userRole = profile?.role || "agent"; // Default strictly to lowest privilege
+
+      // 6. ENFORCE WORKSPACE BOUNDARIES
+      
+      // If Admin tries to access Agent portal, push them back to Admin dashboard
+      if (userRole === "admin" && isAgentRoute) {
+        return NextResponse.redirect(new URL("/admin", req.url));
       }
-      const url = request.nextUrl.clone()
-      url.pathname = '/login'
-      url.searchParams.set('error', 'profile_not_found')
-      const redirectResponse = NextResponse.redirect(url)
-      clearSupabaseAuthCookies(redirectResponse, request)
-      return redirectResponse
-    }
 
-    // Prevent Agents from accessing Admin pages
-    if (isAdminRoute && role !== 'admin' && role !== 'manager') {
-      const url = request.nextUrl.clone()
-      url.pathname = role === 'agent' ? '/agent/dashboard' : '/login'
-      return NextResponse.redirect(url)
-    }
+      // If Agent tries to access Admin portal, push them back to Agent dashboard
+      if (userRole === "agent" && isAdminRoute) {
+        return NextResponse.redirect(new URL("/agent", req.url));
+      }
 
-    // Prevent Admins from accessing Agent operational pipelines
-    if (isAgentRoute && role !== 'agent') {
-      const url = request.nextUrl.clone()
-      url.pathname = role === 'admin' || role === 'manager' ? '/admin/po' : '/login'
-      return NextResponse.redirect(url)
-    }
+      // If already logged in and trying to view the login page, bypass it
+      if (isAuthRoute) {
+        return NextResponse.redirect(new URL(userRole === "admin" ? "/admin" : "/agent", req.url));
+      }
 
-    // Keep /login reachable even for authenticated users to avoid redirect loops
-    // when stale or partially invalid sessions exist in the browser.
+    } catch (err) {
+      // If token parsing or validation fails, wipe their access and force re-login
+      if (isAdminRoute || isAgentRoute) {
+        return NextResponse.redirect(new URL("/login?error=session_expired", req.url));
+      }
+    }
   }
 
-  return supabaseResponse
+  return res;
 }
 
-// Ensure the middleware only runs on actual pages, skipping static files and images
+// 7. Optimize Execution: Only run middleware on specific paths to save bandwidth
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
-}
+  matcher: ["/admin/:path*", "/agent/:path*", "/login", "/register"],
+};
